@@ -197,8 +197,8 @@ class Drive:
         self.create_tmp_folder(tmp_folder_name)
 
         
-    def autenticate(self, name, authpath, debug=False):
-        print(f'Authenticating "{name}"...', debug)
+    def autenticate(self, name, authpath):
+        print(f'Authenticating "{name}"...')
 
         gauth = GoogleAuth()
 
@@ -211,27 +211,27 @@ class Drive:
         cred_path = f'{authpath}/{name}/credentials.json'
 
         if os.path.exists(cred_path):
-            print('Credentials file exists', debug)
+            log.debug('Credentials file exists')
             gauth.LoadCredentialsFile(cred_path)
             if gauth.access_token_expired:
                 # Refresh them if expired
                 os.remove(cred_path)
                 gauth.LocalWebserverAuth()
         else:
-            print('Credentials file does not exist', debug)
+            log.debug('Credentials file does not exist')
             os.makedirs(f"{authpath}/{name}", exist_ok=True)
             gauth.LocalWebserverAuth()
         
         gauth.SaveCredentialsFile(cred_path)
 
-        print(f'Authenticated "{name}"', debug)
+        print(f'Authenticated "{name}"')
 
         self.drive: GoogleDrive = GoogleDrive(gauth)
 
 
     @cachetools.func.ttl_cache(maxsize=256, ttl=5 * 60)
-    def _raw_list_files(self, query, debug=False) -> "list[GoogleDriveFile]":
-        print(f"doing query: {query}", debug)
+    def _raw_list_files(self, query) -> "list[GoogleDriveFile]":
+        log.debug(f"doing query: {query}")
         return self.drive.ListFile({'q': query}).GetList()
 
 
@@ -250,45 +250,45 @@ class Drive:
 
 
 
-    def list_files(self, path: str, folder_id='root', index=0, debug=False) -> "list[GoogleDriveFile]":
+    def list_files(self, path: str, folder_id='root', index=0) -> "list[GoogleDriveFile]":
         if not path.startswith('/'):
             path = f'/{path}'
         if not path.endswith('/'):
             path = f'{path}/'
 
-        print("\n" + "#" * 50, debug)
-        print(f"list_files path {path}, index {index}", debug)
+        log.debug("\n" + "#" * 50)
+        log.debug(f"list_files path {path}, index {index}")
 
         folders = path.split('/')[:-1 or None]
 
-        print(f"folder_id: {folder_id}", debug)
-        l: "list[GoogleDriveFile]" = self._raw_list_files(f"'{folder_id}' in parents and trashed=false", debug)
+        log.debug(f"folder_id: {folder_id}")
+        l: "list[GoogleDriveFile]" = self._raw_list_files(f"'{folder_id}' in parents and trashed=false")
 
         cache_path = '/'
         for folder in folders[1:index+1]:
             cache_path += f'{folder}/'
         
         if index == len(folders) - 1:
-            print("exit condition", debug)
+            log.debug("exit condition")
             return l
 
         index += 1
 
         next_folder = folders[index]
 
-        print(f"next_folder {next_folder}", debug)
+        log.debug(f"next_folder {next_folder}")
 
         for f in l:
             if f['title'] == next_folder and f['mimeType'] == 'application/vnd.google-apps.folder':
-                print("recurse", debug)
-                return self.list_files(path, f['id'], index, debug)
+                log.debug("recurse")
+                return self.list_files(path, f['id'], index)
         
         raise Exception(f'Folder {next_folder} not found')
 
 
     # fatta da copilot
-    def mkdir(self, path: str, debug=False) -> None:
-        print(f"mkdir {path}", debug)
+    def mkdir(self, path: str) -> None:
+        log.debug(f"mkdir {path}")
 
 
 
