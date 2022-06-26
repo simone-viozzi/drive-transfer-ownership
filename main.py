@@ -200,12 +200,8 @@ class Drive:
         self.name = self.about['name']
 
         self.create_tmp_folder(tmp_folder_name)
-        
 
-        # to cache the files and avoid reqery the drive every time
-        #self.files_cache = {}
         
-
     def autenticate(self, name, debug=False):
         printd(f'Authenticating "{name}"...', debug)
 
@@ -234,9 +230,14 @@ class Drive:
         self.drive: GoogleDrive = GoogleDrive(gauth)
 
 
+    @cachetools.func.ttl_cache(maxsize=256, ttl=5 * 60)
+    def _raw_list_files(self, query, debug=False) -> "list[GoogleDriveFile]":
+        printd(f"doing query: {query}", debug)
+        return self.drive.ListFile({'q': query}).GetList()
+
 
     def create_tmp_folder(self, tmp_folder_name):
-        tmp_query = self.drive.ListFile({'q': f"'root' in parents and trashed=false and title='{tmp_folder_name}'"}).GetList()
+        tmp_query = self._raw_list_files(f"'root' in parents and trashed=false and title='{tmp_folder_name}'")
         if not tmp_query:
             self.tmp = self.drive.CreateFile({
                 'title': f'{tmp_folder_name}',
@@ -247,12 +248,7 @@ class Drive:
             self.tmp.Upload()
         else:
             self.tmp = tmp_query[0]
-    
 
-    @cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
-    def _raw_list_files(self, query, debug=False) -> "list[GoogleDriveFile]":
-        printd(f"doing query: {query}", debug)
-        return self.drive.ListFile({'q': query}).GetList()
 
 
     def list_files(self, path: str, folder_id='root', index=0, debug=False) -> "list[GoogleDriveFile]":
