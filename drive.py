@@ -1,4 +1,5 @@
 
+from zipfile import Path
 import cachetools.func
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -6,6 +7,8 @@ from pydrive2.files import GoogleDriveFile
 import os
 import json
 import logging
+from exceptions import FolderNotFound, FolderAlreadyExist
+
 
 log = logging.getLogger(__name__)
 
@@ -251,10 +254,7 @@ class Drive:
 
 
     def list_files(self, path: str, folder_id='root', index=0) -> "list[GoogleDriveFile]":
-        if not path.startswith('/'):
-            path = f'/{path}'
-        if not path.endswith('/'):
-            path = f'{path}/'
+        path = self.check_path(path)
 
         log.debug("\n" + "#" * 50)
         log.debug(f"list_files path {path}, index {index}")
@@ -283,27 +283,32 @@ class Drive:
                 log.debug("recurse")
                 return self.list_files(path, f['id'], index)
         
-        raise Exception(f'Folder {next_folder} not found')
+        raise FolderNotFound(next_folder)
 
 
-    # fatta da copilot
     def mkdir(self, path: str) -> None:
+        path = self.check_path(path)
+
         log.debug(f"mkdir {path}")
+        
+        try:
+            l = self.list_files(path)
+            if l:
+                raise FolderAlreadyExist(Path)
+        except FolderNotFound:
 
-
-
-        self.drive.CreateFile({
-            'title': path,
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [{'id': 'root'}]
-            }).Upload()
+            self.drive.CreateFile({
+                'title': path,
+                'mimeType': 'application/vnd.google-apps.folder',
+                'parents': [{'id': 'root'}]
+                }).Upload()
     
 
     def download(self, file: "GoogleDriveFile", path) -> None:
 
         if file['mimeType'] == 'application/vnd.google-apps.folder':
             os.mkdir(f"{path}/{file['title']}")
-            for f in self.drive.ListFile({'q': f"'{file['id']}' in parents and trashed=false"}).GetList():
+            for f in self._raw_list_files(f"'{file['id']}' in parents and trashed=false"):
                 self.download(f, f"{path}/{file['title']}")
         else:
             if file['mimeType'] not in export_guide:
@@ -335,3 +340,11 @@ class Drive:
 
             with open(f"{path}.metadata", 'w') as f:
                 json.dump(file.metadata, f, indent=4)
+
+    def check_path(self, path):
+        if not path.startswith('/'):
+            path = f'/{path}'
+        if not path.endswith('/'):
+            path = f'{path}/'
+        
+        return path
