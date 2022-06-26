@@ -59,7 +59,7 @@ if __name__ == '__main__':
     log.debug("\n" + "*" * 80)
     log.debug(f"listing files in /secondo_anno/Anno 2 Sem.2/Analisi Numerica/Moodle/soluzioni su spazi piani")
 
-    l = univpm1.list_files("/secondo_anno/Anno 2 Sem.2/Analisi Numerica/moodle/soluzioni su spazi piani",  debug=True)
+    l = univpm1.list_files("/secondo_anno/Anno 2 Sem.2/Analisi Numerica/moodle/soluzioni su spazi piani")
 
     l = map(lambda f: f['title'], l)
 
