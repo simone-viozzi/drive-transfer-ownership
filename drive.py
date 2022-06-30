@@ -366,7 +366,7 @@ class Drive:
             download_path (str): the local path where to download the file
 
         Raises:
-            TODO: specialize the exception
+            TODO: #2 specialize the exception
             Exception: if the format of the file is not recognized
         """        
 
@@ -376,6 +376,7 @@ class Drive:
                 self.download(f, f"{download_path}/{file['title']}")
         else:
             if file['mimeType'] not in export_guide:
+                
                 raise Exception(f"Unsupported file type: {file['mimeType']}")
 
             file.GetContentFile(f"{download_path}/{file['title']}", mimetype=export_guide[file['mimeType']])
