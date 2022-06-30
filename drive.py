@@ -352,24 +352,35 @@ class Drive:
         
         return f
 
-    def rm(self, path, recursive=False):
+    def rm(self, file: "GoogleDriveFile", recursive=False):
         raise NotImplementedError()
         ...
 
 
-    def download(self, file: "GoogleDriveFile", path) -> None:
+    def download(self, file: "GoogleDriveFile", download_path) -> None:
+        """download a file into a local path. 
+        if the file is a folder download recurdively it's content
+
+        Args:
+            file (GoogleDriveFile): the file to download
+            download_path (str): the local path where to download the file
+
+        Raises:
+            TODO: specialize the exception
+            Exception: if the format of the file is not recognized
+        """        
 
         if file['mimeType'] == 'application/vnd.google-apps.folder':
-            os.mkdir(f"{path}/{file['title']}")
+            os.mkdir(f"{download_path}/{file['title']}")
             for f in self._raw_list_files(f"'{file['id']}' in parents and trashed=false"):
-                self.download(f, f"{path}/{file['title']}")
+                self.download(f, f"{download_path}/{file['title']}")
         else:
             if file['mimeType'] not in export_guide:
                 raise Exception(f"Unsupported file type: {file['mimeType']}")
 
-            file.GetContentFile(f"{path}/{file['title']}", mimetype=export_guide[file['mimeType']])
+            file.GetContentFile(f"{download_path}/{file['title']}", mimetype=export_guide[file['mimeType']])
 
-            with open(f"{path}/{file['title']}.metadata", 'w') as f:
+            with open(f"{download_path}/{file['title']}.metadata", 'w') as f:
                 json.dump(file.metadata, f, indent=4)
 
 
