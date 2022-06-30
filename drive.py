@@ -1,4 +1,5 @@
 
+from genericpath import exists
 from zipfile import Path
 import cachetools.func
 from pydrive2.auth import GoogleAuth
@@ -197,10 +198,12 @@ class Drive:
         self.about = self.drive.GetAbout()
         self.name = self.about['name']
 
+        # the temp folder will be used to load thing before moving 
+        # them to their final destination
         self.create_tmp_folder(tmp_folder_name)
 
         
-    def autenticate(self, name, authpath):
+    def autenticate(self, name, authpath) -> None:
         print(f'Authenticating "{name}"...')
 
         gauth = GoogleAuth()
@@ -233,27 +236,32 @@ class Drive:
 
 
     @cachetools.func.ttl_cache(maxsize=256, ttl=5 * 60)
-    def _raw_list_files(self, query) -> "list[GoogleDriveFile]":
+    def _raw_list_files(self, query: str) -> "list[GoogleDriveFile]":
+        log = logging.getLogger(f"{__name__}._raw_list_files")
         log.debug(f"doing query: {query}")
         return self.drive.ListFile({'q': query}).GetList()
 
 
     def create_tmp_folder(self, tmp_folder_name):
-        tmp_query = self._raw_list_files(f"'root' in parents and trashed=false and title='{tmp_folder_name}'")
-        if not tmp_query:
-            self.tmp = self.drive.CreateFile({
-                'title': f'{tmp_folder_name}',
-                'mimeType': 'application/vnd.google-apps.folder',
-                'parents': [{'id': 'root'}]
-                })
-
-            self.tmp.Upload()
-        else:
-            self.tmp = tmp_query[0]
+        self.tmp = self.mkdir(f"/{tmp_folder_name}", exist_ok=True)
 
 
+    def ls(self, path: str, folder_id='root', index=0) -> "list[GoogleDriveFile]":
+        """list all files in a folder given it's path
 
-    def list_files(self, path: str, folder_id='root', index=0) -> "list[GoogleDriveFile]":
+        Args:
+            path (str): the path to the folder, es: /folder/subfolder
+            folder_id (str, optional): used in recursion. Defaults to 'root'.
+            index (int, optional): used in recursion. Defaults to 0.
+
+        Raises:
+            FolderNotFound: in case the folder does not exist
+
+        Returns:
+            list[GoogleDriveFile]: list of files / folders in the folder
+        """
+        log = logging.getLogger(f"{__name__}.list_files")
+        
         path = self.check_path(path)
 
         log.debug("\n" + "#" * 50)
@@ -281,28 +289,73 @@ class Drive:
         for f in l:
             if f['title'] == next_folder and f['mimeType'] == 'application/vnd.google-apps.folder':
                 log.debug("recurse")
-                return self.list_files(path, f['id'], index)
+                return self.ls(path, f['id'], index)
         
         raise FolderNotFound(next_folder)
 
 
-    def mkdir(self, path: str) -> None:
+    def mkdir(self, path: str, exist_ok = False) -> "GoogleDriveFile":
+        """create a folder in path
+
+        Args:
+            path (str): the path to the folder, es: /folder/subfolder/newfolder
+            exist_ok (bool, optional): if false and the folder exist will give error. Defaults to False.
+
+        Raises:
+            FolderAlreadyExist: if the folder exist and exist_ok = False
+
+        Returns:
+            GoogleDriveFile: the new folder
+        """
         path = self.check_path(path)
 
         log.debug(f"mkdir {path}")
-        
-        try:
-            l = self.list_files(path)
-            if l:
-                raise FolderAlreadyExist(Path)
-        except FolderNotFound:
 
-            self.drive.CreateFile({
-                'title': path,
-                'mimeType': 'application/vnd.google-apps.folder',
-                'parents': [{'id': 'root'}]
-                }).Upload()
-    
+        folders = path.split('/')[:-1 or None]
+        folder_name = folders[-1]
+        parent_name = folders[-2]
+
+        log.debug(f"folder_name {folder_name}, parent_name {parent_name}")
+
+        partent_path = '/'
+        for folder in folders[1:-2]:
+            partent_path += f'{folder}/'
+
+        log.debug(f"partent_path {partent_path}")
+        
+        l = self.ls(partent_path)
+        for f in l:
+            if f['title'] == folder_name and f['mimeType'] == 'application/vnd.google-apps.folder':
+                log.debug(f"folder {folder_name} already exists")
+                if exist_ok:
+                    return f
+                else:
+                    raise FolderAlreadyExist(path)
+        
+        log.debug(f"creating folder {path}")
+        
+        parent_id = 'root'
+        for l in self.ls(partent_path):
+            if l['title'] == parent_name:
+                parent_id = l['id']
+                break
+        
+        log.debug(f"parent_id {parent_id}")
+
+        f = self.drive.CreateFile({
+            'title': folder_name,
+            'mimeType': 'application/vnd.google-apps.folder',
+            'parents': [{'id': parent_id}]
+            })
+
+        f.Upload()
+        
+        return f
+
+    def rm(self, path, recursive=False):
+        raise NotImplementedError()
+        ...
+
 
     def download(self, file: "GoogleDriveFile", path) -> None:
 

@@ -5,6 +5,7 @@ import os
 from drive import Drive
 import logging
 import logging.config
+import json
 
 
 basepath = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +36,9 @@ logging_conf = {
 }
 
 logging.getLogger('googleapiclient.discovery').setLevel(logging.ERROR)
+logging.getLogger('drive.list_files').setLevel(logging.ERROR)
+logging.getLogger('drive._raw_list_files').setLevel(logging.ERROR)
+
 
 logging.config.dictConfig(logging_conf)
 log = logging.getLogger()
@@ -47,23 +51,7 @@ if __name__ == '__main__':
     
     univpm1: Drive = Drive('univpm1', f'{basepath}/auth/')
 
-    log.debug("\n" + "*" * 80)
-    log.debug(f"listing files in /secondo_anno/Anno 2 Sem.2/Algebra e Logica/appunti")
-
-    l = univpm1.list_files("/secondo_anno/Anno 2 Sem.2/Algebra e Logica/appunti")
-
-    l = map(lambda f: f['title'], l)
-
-    log.debug(list(l))
-
-    log.debug("\n" + "*" * 80)
-    log.debug(f"listing files in /secondo_anno/Anno 2 Sem.2/Analisi Numerica/Moodle/soluzioni su spazi piani")
-
-    l = univpm1.list_files("/secondo_anno/Anno 2 Sem.2/Analisi Numerica/moodle/soluzioni su spazi piani")
-
-    l = map(lambda f: f['title'], l)
-
-    log.debug(list(l))
+    print(json.dumps(univpm1.tmp, indent=4))
 
 
     #log.debug("\n" + "*" * 80)
