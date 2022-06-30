@@ -376,7 +376,7 @@ class Drive:
                 self.download(f, f"{download_path}/{file['title']}")
         else:
             if file['mimeType'] not in export_guide:
-                
+                #2
                 raise Exception(f"Unsupported file type: {file['mimeType']}")
 
             file.GetContentFile(f"{download_path}/{file['title']}", mimetype=export_guide[file['mimeType']])
