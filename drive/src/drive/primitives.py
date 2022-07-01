@@ -9,6 +9,7 @@ import os
 import json
 import logging
 from .exceptions import FolderNotFound, FolderAlreadyExist
+from .log_decorator import local_logger
 
 
 log = logging.getLogger(__name__)
@@ -234,10 +235,10 @@ class primitives:
 
         self.drive: GoogleDrive = GoogleDrive(gauth)
 
-
+    @local_logger
     @cachetools.func.ttl_cache(maxsize=256, ttl=5 * 60)
-    def _raw_list_files(self, query: str) -> "list[GoogleDriveFile]":
-        log = logging.getLogger(f"{__name__}._raw_list_files")
+    def _raw_ls(self, query: str, log=log) -> "list[GoogleDriveFile]":
+        #log = logging.getLogger(f"{__name__}._raw_ls")
         log.debug(f"doing query: {query}")
         return self.drive.ListFile({'q': query}).GetList()
 
@@ -246,7 +247,8 @@ class primitives:
         self.tmp = self.mkdir(f"/{tmp_folder_name}", exist_ok=True)
 
 
-    def ls(self, path: str, folder_id='root', index=0) -> "list[GoogleDriveFile]":
+    @local_logger
+    def ls(self, path: str, folder_id='root', index=0, log=log) -> "list[GoogleDriveFile]":
         """list all files in a folder given it's path
 
         Args:
@@ -260,17 +262,17 @@ class primitives:
         Returns:
             list[GoogleDriveFile]: list of files / folders in the folder
         """
-        log = logging.getLogger(f"{__name__}.list_files")
+        #log = logging.getLogger(f"{__name__}.ls")
         
         path = self.check_path(path)
 
         log.debug("\n" + "#" * 50)
-        log.debug(f"list_files path {path}, index {index}")
+        log.debug(f"ls path {path}, index {index}")
 
         folders = path.split('/')[:-1 or None]
 
         log.debug(f"folder_id: {folder_id}")
-        l: "list[GoogleDriveFile]" = self._raw_list_files(f"'{folder_id}' in parents and trashed=false")
+        l: "list[GoogleDriveFile]" = self._raw_ls(f"'{folder_id}' in parents and trashed=false")
 
         cache_path = '/'
         for folder in folders[1:index+1]:
@@ -294,7 +296,7 @@ class primitives:
         raise FolderNotFound(next_folder)
 
 
-    def mkdir(self, path: str, exist_ok = False) -> "GoogleDriveFile":
+    def mkdir(self, path: str, exist_ok = False, log=log) -> "GoogleDriveFile":
         """create a folder in path
 
         Args:
@@ -357,7 +359,7 @@ class primitives:
         ...
 
 
-    def download(self, file: "GoogleDriveFile", download_path) -> None:
+    def download(self, file: "GoogleDriveFile", download_path, log=log) -> None:
         """download a file into a local path. 
         if the file is a folder download recurdively it's content
 
@@ -372,7 +374,7 @@ class primitives:
 
         if file['mimeType'] == 'application/vnd.google-apps.folder':
             os.mkdir(f"{download_path}/{file['title']}")
-            for f in self._raw_list_files(f"'{file['id']}' in parents and trashed=false"):
+            for f in self._raw_ls(f"'{file['id']}' in parents and trashed=false"):
                 self.download(f, f"{download_path}/{file['title']}")
         else:
             if file['mimeType'] not in export_guide:

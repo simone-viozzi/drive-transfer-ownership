@@ -2,9 +2,7 @@
 
 import shutil
 import os
-# TODO how to import
 from drive import primitives
-
 import logging
 import logging.config
 import json
@@ -38,8 +36,8 @@ logging_conf = {
 }
 
 logging.getLogger('googleapiclient.discovery').setLevel(logging.ERROR)
-logging.getLogger('drive.list_files').setLevel(logging.ERROR)
-logging.getLogger('drive._raw_list_files').setLevel(logging.ERROR)
+logging.getLogger('drive.primitives.ls').setLevel(logging.ERROR)
+logging.getLogger('drive.primitives._raw_ls').setLevel(logging.ERROR)
 
 
 logging.config.dictConfig(logging_conf)
@@ -55,41 +53,5 @@ if __name__ == '__main__':
 
     print(json.dumps(univpm1.tmp, indent=4))
 
-
-    #log.debug("\n" + "*" * 80)
-    #log.debug(f"listing files in /tmp_folder/bla")
-    #l = univpm1.list_files("/tmp_folder/bla", debug=True)
-#
-    #l = map(lambda f: f['title'], l)
-#
-    #log.debug(list(l))
-#
-    #log.debug("\n" + "*" * 80)
-    #log.debug(f"listing files in /tmp_folder/")
-#
-    #l = univpm1.list_files("/tmp_folder/", debug=True)
-#
-    #l = map(lambda f: f['title'], l)
-#
-    #log.debug(list(l))
-#
-    #log.debug("\n" + "*" * 80)
-    #log.debug(f"listing files in /")
-#
-    #l = univpm1.list_files("/",  debug=True)
-#
-    #l = map(lambda f: f['title'], l)
-#
-    #log.debug(list(l))
-
-    #log.debug(json.dumps(univpm1.about, indent=4))
-
-
-    #log.debug("#"*50)
-    #for f in l:
-    #    log.debug(f"{f['title']}, {f['ownerNames'][0]}")
-    #    if f["ownerNames"][0] != univpm1.name:
-    #        log.debug("not mine")
-    #        univpm1.download(f, f'{basepath}/tmp')
 
     
