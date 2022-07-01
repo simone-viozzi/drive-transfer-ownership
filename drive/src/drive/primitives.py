@@ -8,7 +8,7 @@ from pydrive2.files import GoogleDriveFile
 import os
 import json
 import logging
-from exceptions import FolderNotFound, FolderAlreadyExist
+from .exceptions import FolderNotFound, FolderAlreadyExist
 
 
 log = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ export_guide = {
 }
 
 
-class Drive:
+class primitives:
 
     def __init__(self, name, authpath, tmp_folder_name='tmp') -> None:
         self.autenticate(name, authpath)

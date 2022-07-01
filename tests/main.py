@@ -3,7 +3,7 @@
 import shutil
 import os
 # TODO how to import
-from drive import setup
+from drive import primitives
 
 import logging
 import logging.config
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     shutil.rmtree(f'{basepath}/tmp/', ignore_errors=True)
     os.mkdir(f'{basepath}/tmp/')
     
-    univpm1: Drive = Drive('univpm1', f'{basepath}/auth/')
+    univpm1: primitives = primitives('univpm1', f'{basepath}/auth/')
 
     print(json.dumps(univpm1.tmp, indent=4))
 
