@@ -14,3 +14,8 @@ class FolderNotFound(DriveException):
 class FolderAlreadyExist(DriveException):
     def __init__(self, message):
         super(FolderAlreadyExist, self).__init__(f'Folder "{message}" already exist')
+
+
+class FolderNotEmpty(DriveException):
+    def __init__(self, message):
+        super(FolderNotEmpty, self).__init__(f'Folder "{message}" is not empty')

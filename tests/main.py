@@ -51,7 +51,9 @@ if __name__ == '__main__':
     
     univpm1: primitives = primitives('univpm1', f'{basepath}/auth/')
 
-    print(json.dumps(univpm1.tmp, indent=4))
+    file = univpm1.ls("/tmp")[0]
+
+    univpm1.rm(file, recursive=True)
 
 
     

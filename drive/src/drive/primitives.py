@@ -8,7 +8,7 @@ from pydrive2.files import GoogleDriveFile
 import os
 import json
 import logging
-from .exceptions import FolderNotFound, FolderAlreadyExist
+from .exceptions import FolderNotFound, FolderAlreadyExist, FolderNotEmpty
 from utils import local_logger
 
 
@@ -353,8 +353,42 @@ class primitives:
         return f
 
     def rm(self, file: "GoogleDriveFile", recursive=False):
-        raise NotImplementedError()
-        ...
+        """delete a file or folder
+
+        Args:
+            file (GoogleDriveFile): the file / folder to delete
+            recursive (bool, optional): if true the whole subtree under file will be deleted. Defaults to False.
+
+        Raises:
+            FolderNotEmpty: if you delete a non empty folder and recursive = False
+        """        
+
+        if file['mimeType'] == 'application/vnd.google-apps.folder':
+            if recursive:
+                file.Trash()
+            else: 
+                l = self._raw_ls(f"'{file['id']}' in parents and trashed=false")
+                if len(l) > 0:
+                    raise FolderNotEmpty(file['title'])
+                else:
+                    file.Trash()
+        else:
+            file.Trash()
+
+    def cp(self, src: "GoogleDriveFile", dst: "GoogleDriveFile", log=log):
+        """copy a file or folder
+
+        Args:
+            src (GoogleDriveFile): the file / folder to copy
+            dst (GoogleDriveFile): the destination folder
+            log (logger, optional): the logger. Defaults to log.
+        """
+        log.debug(f"cp {src['title']} to {dst['title']}")
+        
+        
+        self.drive.auth.service.files().copy(
+            
+        ).execute()
 
 
     def download(self, file: "GoogleDriveFile", download_path, log=log) -> None:
