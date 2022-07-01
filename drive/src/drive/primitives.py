@@ -9,7 +9,7 @@ import os
 import json
 import logging
 from .exceptions import FolderNotFound, FolderAlreadyExist
-from .log_decorator import local_logger
+from utils.local_logger import local_logger
 
 
 log = logging.getLogger(__name__)
@@ -238,7 +238,6 @@ class primitives:
     @local_logger
     @cachetools.func.ttl_cache(maxsize=256, ttl=5 * 60)
     def _raw_ls(self, query: str, log=log) -> "list[GoogleDriveFile]":
-        #log = logging.getLogger(f"{__name__}._raw_ls")
         log.debug(f"doing query: {query}")
         return self.drive.ListFile({'q': query}).GetList()
 
@@ -262,8 +261,7 @@ class primitives:
         Returns:
             list[GoogleDriveFile]: list of files / folders in the folder
         """
-        #log = logging.getLogger(f"{__name__}.ls")
-        
+   
         path = self.check_path(path)
 
         log.debug("\n" + "#" * 50)
@@ -388,7 +386,7 @@ class primitives:
 
 
     # fatta da copilot
-    def upload(self, path: str, folder_id='root') -> None:
+    def upload(self, path: str, folder_id='root', log=log) -> None:
         if not os.path.exists(path):
             raise Exception(f'Path {path} does not exist')
 
@@ -407,6 +405,7 @@ class primitives:
 
             with open(f"{path}.metadata", 'w') as f:
                 json.dump(file.metadata, f, indent=4)
+                
 
     def check_path(self, path):
         if not path.startswith('/'):
