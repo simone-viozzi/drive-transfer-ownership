@@ -2,7 +2,9 @@
 
 import shutil
 import os
-from drive import Drive
+# TODO how to import
+from drive import setup
+
 import logging
 import logging.config
 import json
