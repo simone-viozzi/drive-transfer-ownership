@@ -9,7 +9,7 @@ import os
 import json
 import logging
 from .exceptions import FolderNotFound, FolderAlreadyExist
-from utils.local_logger import local_logger
+from utils import local_logger
 
 
 log = logging.getLogger(__name__)
