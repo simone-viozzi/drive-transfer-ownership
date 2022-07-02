@@ -51,9 +51,14 @@ if __name__ == '__main__':
     
     univpm1: primitives = primitives('univpm1', f'{basepath}/auth/')
 
-    file = univpm1.ls("/tmp")[0]
+    l = univpm1.ls('/tmp/')
+    print(l)
 
-    univpm1.rm(file, recursive=True)
+
+    #f = univpm1.drive.CreateFile({'id': 'root'})
+#
+    #f.FetchMetadata()
+    #print(json.dumps(f.metadata, indent=4))
 
 
     

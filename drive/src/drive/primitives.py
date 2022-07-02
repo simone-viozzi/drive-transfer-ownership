@@ -1,6 +1,4 @@
 
-from genericpath import exists
-from zipfile import Path
 import cachetools.func
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -237,9 +235,15 @@ class primitives:
 
     @local_logger
     @cachetools.func.ttl_cache(maxsize=256, ttl=5 * 60)
-    def _raw_ls(self, query: str, log=log) -> "list[GoogleDriveFile]":
+    def _get_files_by_query(self, query: str, log=log) -> "list[GoogleDriveFile]":
         log.debug(f"doing query: {query}")
         return self.drive.ListFile({'q': query}).GetList()
+
+
+    def _get_file_by_id(self, id: str) -> "GoogleDriveFile":
+        f = self.drive.CreateFile({'id': id})
+        f.FetchMetadata()
+        return f
 
 
     def create_tmp_folder(self, tmp_folder_name):
@@ -247,7 +251,13 @@ class primitives:
 
 
     @local_logger
-    def ls(self, path: str, folder_id='root', index=0, log=log) -> "list[GoogleDriveFile]":
+    def ls(
+        self,
+        path: str,
+        folder={'id': 'root'},
+        index=0,
+        log=log
+    ) -> "list[GoogleDriveFile]":
         """list all files in a folder given it's path
 
         Args:
@@ -269,8 +279,8 @@ class primitives:
 
         folders = path.split('/')[:-1 or None]
 
-        log.debug(f"folder_id: {folder_id}")
-        l: "list[GoogleDriveFile]" = self._raw_ls(f"'{folder_id}' in parents and trashed=false")
+        log.debug(f"folder_id: {folder}")
+        l: "list[GoogleDriveFile]" = self._get_files_by_query(f"'{folder['id']}' in parents and trashed=false")
 
         cache_path = '/'
         for folder in folders[1:index+1]:
@@ -289,7 +299,7 @@ class primitives:
         for f in l:
             if f['title'] == next_folder and f['mimeType'] == 'application/vnd.google-apps.folder':
                 log.debug("recurse")
-                return self.ls(path, f['id'], index)
+                return self.ls(path, f, index)
         
         raise FolderNotFound(next_folder)
 
@@ -346,7 +356,7 @@ class primitives:
             'title': folder_name,
             'mimeType': 'application/vnd.google-apps.folder',
             'parents': [{'id': parent_id}]
-            })
+        })
 
         f.Upload()
         
@@ -367,7 +377,7 @@ class primitives:
             if recursive:
                 file.Trash()
             else: 
-                l = self._raw_ls(f"'{file['id']}' in parents and trashed=false")
+                l = self._get_files_by_query(f"'{file['id']}' in parents and trashed=false")
                 if len(l) > 0:
                     raise FolderNotEmpty(file['title'])
                 else:
@@ -375,7 +385,8 @@ class primitives:
         else:
             file.Trash()
 
-    def cp(self, src: "GoogleDriveFile", dst: "GoogleDriveFile", log=log):
+
+    def cp(self, src_path, dst_path, new_name, log=log):
         """copy a file or folder
 
         Args:
@@ -383,12 +394,11 @@ class primitives:
             dst (GoogleDriveFile): the destination folder
             log (logger, optional): the logger. Defaults to log.
         """
+        raise NotImplementedError()
         log.debug(f"cp {src['title']} to {dst['title']}")
         
+        self.drive.CopyFile(src['id'], dst['id'], new_name)
         
-        self.drive.auth.service.files().copy(
-            
-        ).execute()
 
 
     def download(self, file: "GoogleDriveFile", download_path, log=log) -> None:
@@ -406,7 +416,7 @@ class primitives:
 
         if file['mimeType'] == 'application/vnd.google-apps.folder':
             os.mkdir(f"{download_path}/{file['title']}")
-            for f in self._raw_ls(f"'{file['id']}' in parents and trashed=false"):
+            for f in self._get_files_by_query(f"'{file['id']}' in parents and trashed=false"):
                 self.download(f, f"{download_path}/{file['title']}")
         else:
             if file['mimeType'] not in export_guide:
