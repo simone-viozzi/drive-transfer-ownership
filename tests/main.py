@@ -51,19 +51,15 @@ if __name__ == '__main__':
     
     univpm1: primitives = primitives('univpm1', f'{basepath}/auth/')
 
-    l = univpm1.ls('/tmp/')
-
-    for f in l:
-        if f['title'] == 'a.pdf':
-            fileid = f['id']
-        elif f['title'] == 'bla':
-            folderid = f['id']
-
-    univpm1.drive.CopyFile(fileid, folderid, 'b.pdf')
+    print("entripoint")
+    
+    path = "/tmp/ff/gg/aa/tt"
+    univpm1.mkdir(path, make_parents=True, exist_ok=True)
+    univpm1.ls(path)
     
 
 
-    #f = univpm1.drive.CreateFile({'id': 'root'})
+    #f = univpm1.drive.CreateFile(yo{'id': 'root'})
 #
     #f.FetchMetadata()
     #print(json.dumps(f.metadata, indent=4))

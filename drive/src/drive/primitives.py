@@ -1,11 +1,15 @@
-
 import cachetools.func
+import cachetools
+from cachetools import cached
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from pydrive2.files import GoogleDriveFile
 import os
 import json
 import logging
+import time
+
+from requests import get
 from .exceptions import FolderNotFound, FolderAlreadyExist, FolderNotEmpty
 from utils import local_logger
 
@@ -181,7 +185,7 @@ log = logging.getLogger(__name__)
         }
     ],
 """
-
+cache = cachetools.LRUCache(maxsize=1024, getsizeof=len)
 
 export_guide = {
     "application/vnd.google-apps.document": "application/vnd.oasis.opendocument.text",
@@ -192,7 +196,6 @@ export_guide = {
 class primitives:
 
     def __init__(self, name, authpath, tmp_folder_name='tmp') -> None:
-        self.log = log
         self.autenticate(name, authpath)
 
         self.about = self.drive.GetAbout()
@@ -201,8 +204,6 @@ class primitives:
         # the temp folder will be used to load thing before moving 
         # them to their final destination
         self.create_tmp_folder(tmp_folder_name)
-
-        
 
         
     def autenticate(self, name, authpath) -> None:
@@ -219,14 +220,14 @@ class primitives:
         cred_path = f'{authpath}/{name}/credentials.json'
 
         if os.path.exists(cred_path):
-            self.log.debug('Credentials file exists')
+            log.debug('Credentials file exists')
             gauth.LoadCredentialsFile(cred_path)
             if gauth.access_token_expired:
                 # Refresh them if expired
                 os.remove(cred_path)
                 gauth.LocalWebserverAuth()
         else:
-            self.log.debug('Credentials file does not exist')
+            log.debug('Credentials file does not exist')
             os.makedirs(f"{authpath}/{name}", exist_ok=True)
             gauth.LocalWebserverAuth()
         
@@ -236,13 +237,13 @@ class primitives:
 
         self.drive: GoogleDrive = GoogleDrive(gauth)
 
-    @local_logger
-    @cachetools.func.ttl_cache(maxsize=256, ttl=5 * 60)
+    @cached(cache=cache)
     def _get_files_by_query(self, query: str) -> "list[GoogleDriveFile]":
-        self.log.debug(f"doing query: {query}")
+        log = logging.getLogger(f"{__name__}._get_files_by_query")
+        log.debug(f"doing query: {query}")
         return self.drive.ListFile({'q': query}).GetList()
 
-
+    @cached(cache=cache)    
     def _get_file_by_id(self, id: str) -> "GoogleDriveFile":
         f = self.drive.CreateFile({'id': id})
         f.FetchMetadata()
@@ -253,14 +254,19 @@ class primitives:
         self.tmp = self.mkdir(f"/{tmp_folder_name}", exist_ok=True)
 
 
-    @local_logger
     def ls(
         self,
         path: str,
-        folder={'id': 'root'},
+        get_folder=False,
+        folder={'id': 'root', 'title': 'root'},
         index=0
     ) -> "list[GoogleDriveFile]":
-        """list all files in a folder given it's path
+        """list all files in a folder given it's path, 
+            return the file if the path point to a single file.
+
+        TODO:
+            - what happen in a file and a folder have the same title?
+            - maybe add support for wildcards?
 
         Args:
             path (str): the path to the folder, es: /folder/subfolder
@@ -273,39 +279,53 @@ class primitives:
         Returns:
             list[GoogleDriveFile]: list of files / folders in the folder
         """
+        log = logging.getLogger(f"{__name__}.ls")
+        
         path = self.check_path(path)
 
-        self.log.debug("\n" + "#" * 50)
-        self.log.debug(f"ls path {path}, index {index}")
+        log.debug("#" * 50)
+        log.debug(f"ls path {path}, index {index}")
 
-        folders = path.split('/')[:-1 or None]
+        folders = path.split('/')
+        folders[0] = '/'
+        folders = [f for f in folders if f]
+        log.debug(folders)
 
-        self.log.debug(f"folder_id: {folder}")
+        is_last_path_segment = index == len(folders) - 1
+
+        if is_last_path_segment and get_folder:
+            return [folder]
+
+        log.debug(f"folder: {folder['title']}")
         l: "list[GoogleDriveFile]" = self._get_files_by_query(f"'{folder['id']}' in parents and trashed=false")
-
-        cache_path = '/'
-        for folder in folders[1:index+1]:
-            cache_path += f'{folder}/'
         
-        if index == len(folders) - 1:
-            self.log.debug("exit condition")
+        if is_last_path_segment:
+            log.debug("exit condition folder")
             return l
 
         index += 1
-
         next_folder = folders[index]
 
-        self.log.debug(f"next_folder {next_folder}")
+        log.debug(f"next_folder {next_folder}")
 
+        is_last_path_segment = index == len(folders) - 1
         for f in l:
-            if f['title'] == next_folder and f['mimeType'] == 'application/vnd.google-apps.folder':
-                self.log.debug("recurse")
-                return self.ls(path, f, index)
-        
-        raise FolderNotFound(next_folder)
+            if f['title'] == next_folder:
+                if f['mimeType'] == 'application/vnd.google-apps.folder':
+                    log.debug("recurse")
+                    return self.ls(path, get_folder, f, index)
+                elif is_last_path_segment:
+                    log.debug("exit condition file")
+                    return [f]
 
+        path_until_now = '/' + '/'.join(folders[1:index+1])
+        raise FolderNotFound(path_until_now)
 
-    def mkdir(self, path: str, exist_ok = False) -> "GoogleDriveFile":
+    def mkdir(
+        self,
+        path: str, exist_ok=False,
+        make_parents=False,
+    ) -> "GoogleDriveFile":
         """create a folder in path
 
         Args:
@@ -318,40 +338,56 @@ class primitives:
         Returns:
             GoogleDriveFile: the new folder
         """
+        log.debug(f"#" * 50)
         path = self.check_path(path)
 
-        self.log.debug(f"mkdir {path}")
+        log.debug(f"mkdir {path}")
 
-        folders = path.split('/')[:-1 or None]
+        folders = path.split('/')
+        folders[0] = '/'
+        folders = [f for f in folders if f]
+
         folder_name = folders[-1]
-        parent_name = folders[-2]
+        parent_name = folders[-2] if len(folders) > 1 else '/'
 
-        self.log.debug(f"folder_name {folder_name}, parent_name {parent_name}")
+        log.debug(f"folder_name {folder_name}, parent_name {parent_name}")
 
-        partent_path = '/'
-        for folder in folders[1:-2]:
-            partent_path += f'{folder}/'
+        partent_path = '/' + '/'.join(folders[1:-1])
 
-        self.log.debug(f"partent_path {partent_path}")
+        log.debug(f"partent_path {partent_path}")
+
+        last_parent = None
+        try:
+            for f in self.ls(partent_path):
+                if f['title'] == folder_name and f['mimeType'] == 'application/vnd.google-apps.folder':
+                    log.debug(f"folder {folder_name} already exists")
+                    if exist_ok:
+                        return f
+                    else:
+                        raise FolderAlreadyExist(path)
+        except FolderNotFound:
+            log.debug(f"folder {partent_path} does not exist")
+            if make_parents:
+                for i in range(len(folders) - 1):
+                    partial_path = '/' + '/'.join(folders[1:i+1])
+                    log.debug(f"recurse path {partial_path}")
+                    last_parent = self.mkdir(partial_path, exist_ok=True, make_parents=True)
+            else:
+                # TODO change exception
+                raise FolderNotFound(partent_path)
+
+        parent_id = None
+        if last_parent:
+            parent_id = last_parent['id']
+        else:
+            # TODO avoid this as much as possible!
+            log.debug(f"trowing away the cache")
+            cache.clear()
+            parent_id = self.ls(partent_path, get_folder=True)[0]['id']
         
-        l = self.ls(partent_path)
-        for f in l:
-            if f['title'] == folder_name and f['mimeType'] == 'application/vnd.google-apps.folder':
-                self.log.debug(f"folder {folder_name} already exists")
-                if exist_ok:
-                    return f
-                else:
-                    raise FolderAlreadyExist(path)
-        
-        self.log.debug(f"creating folder {path}")
-        
-        parent_id = 'root'
-        for l in self.ls(partent_path):
-            if l['title'] == parent_name:
-                parent_id = l['id']
-                break
-        
-        self.log.debug(f"parent_id {parent_id}")
+        log.debug(f"creating folder {path}")
+     
+        log.debug(f"parent_id {parent_id}")
 
         f = self.drive.CreateFile({
             'title': folder_name,
@@ -360,8 +396,10 @@ class primitives:
         })
 
         f.Upload()
-        
+
+
         return f
+
 
     def rm(self, file: "GoogleDriveFile", recursive=False):
         """delete a file or folder
@@ -396,7 +434,7 @@ class primitives:
             log (logger, optional): the logger. Defaults to log.
         """
         raise NotImplementedError()
-        self.log.debug(f"cp {src['title']} to {dst['title']}")
+        log.debug(f"cp {src['title']} to {dst['title']}")
         
         self.drive.CopyFile(src['id'], dst['id'], new_name)
         
@@ -455,7 +493,7 @@ class primitives:
     def check_path(self, path):
         if not path.startswith('/'):
             path = f'/{path}'
-        if not path.endswith('/'):
-            path = f'{path}/'
+        if path.endswith('/'):
+            path = path[:-1]
         
         return path

@@ -1,6 +1,7 @@
 import functools
 import logging
 
+# TODO il logger non funziona!
 
 def local_logger(func):
     @functools.wraps(func)
