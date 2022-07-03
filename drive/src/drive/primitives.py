@@ -7,11 +7,9 @@ from pydrive2.files import GoogleDriveFile
 import os
 import json
 import logging
-import time
 
-from requests import get
 from .exceptions import FolderNotFound, FolderAlreadyExist, FolderNotEmpty
-from utils import local_logger
+
 
 
 log = logging.getLogger(__name__)
