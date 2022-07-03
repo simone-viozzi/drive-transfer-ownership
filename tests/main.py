@@ -52,7 +52,15 @@ if __name__ == '__main__':
     univpm1: primitives = primitives('univpm1', f'{basepath}/auth/')
 
     l = univpm1.ls('/tmp/')
-    print(l)
+
+    for f in l:
+        if f['title'] == 'a.pdf':
+            fileid = f['id']
+        elif f['title'] == 'bla':
+            folderid = f['id']
+
+    univpm1.drive.CopyFile(fileid, folderid, 'b.pdf')
+    
 
 
     #f = univpm1.drive.CreateFile({'id': 'root'})
