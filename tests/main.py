@@ -16,7 +16,7 @@ logging_conf = {
     'disable_existing_loggers': False,
     'formatters': {
         'standard': {
-            'format': '[%(levelname)s] %(name)s: %(message)s'
+            'format': '[%(levelname)s] %(name)s -> %(funcName)5s: %(message)s'
         },
     },
     'handlers': {
@@ -37,7 +37,7 @@ logging_conf = {
 
 logging.getLogger('googleapiclient.discovery').setLevel(logging.ERROR)
 logging.getLogger('drive.primitives.ls').setLevel(logging.ERROR)
-logging.getLogger('drive.primitives._raw_ls').setLevel(logging.ERROR)
+logging.getLogger('drive.primitives._get_files_by_query').setLevel(logging.ERROR)
 
 
 logging.config.dictConfig(logging_conf)

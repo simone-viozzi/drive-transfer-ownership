@@ -192,6 +192,7 @@ export_guide = {
 class primitives:
 
     def __init__(self, name, authpath, tmp_folder_name='tmp') -> None:
+        self.log = log
         self.autenticate(name, authpath)
 
         self.about = self.drive.GetAbout()
@@ -200,6 +201,8 @@ class primitives:
         # the temp folder will be used to load thing before moving 
         # them to their final destination
         self.create_tmp_folder(tmp_folder_name)
+
+        
 
         
     def autenticate(self, name, authpath) -> None:
@@ -216,14 +219,14 @@ class primitives:
         cred_path = f'{authpath}/{name}/credentials.json'
 
         if os.path.exists(cred_path):
-            log.debug('Credentials file exists')
+            self.log.debug('Credentials file exists')
             gauth.LoadCredentialsFile(cred_path)
             if gauth.access_token_expired:
                 # Refresh them if expired
                 os.remove(cred_path)
                 gauth.LocalWebserverAuth()
         else:
-            log.debug('Credentials file does not exist')
+            self.log.debug('Credentials file does not exist')
             os.makedirs(f"{authpath}/{name}", exist_ok=True)
             gauth.LocalWebserverAuth()
         
@@ -235,8 +238,8 @@ class primitives:
 
     @local_logger
     @cachetools.func.ttl_cache(maxsize=256, ttl=5 * 60)
-    def _get_files_by_query(self, query: str, log=log) -> "list[GoogleDriveFile]":
-        log.debug(f"doing query: {query}")
+    def _get_files_by_query(self, query: str) -> "list[GoogleDriveFile]":
+        self.log.debug(f"doing query: {query}")
         return self.drive.ListFile({'q': query}).GetList()
 
 
@@ -255,8 +258,7 @@ class primitives:
         self,
         path: str,
         folder={'id': 'root'},
-        index=0,
-        log=log
+        index=0
     ) -> "list[GoogleDriveFile]":
         """list all files in a folder given it's path
 
@@ -271,15 +273,14 @@ class primitives:
         Returns:
             list[GoogleDriveFile]: list of files / folders in the folder
         """
-   
         path = self.check_path(path)
 
-        log.debug("\n" + "#" * 50)
-        log.debug(f"ls path {path}, index {index}")
+        self.log.debug("\n" + "#" * 50)
+        self.log.debug(f"ls path {path}, index {index}")
 
         folders = path.split('/')[:-1 or None]
 
-        log.debug(f"folder_id: {folder}")
+        self.log.debug(f"folder_id: {folder}")
         l: "list[GoogleDriveFile]" = self._get_files_by_query(f"'{folder['id']}' in parents and trashed=false")
 
         cache_path = '/'
@@ -287,24 +288,24 @@ class primitives:
             cache_path += f'{folder}/'
         
         if index == len(folders) - 1:
-            log.debug("exit condition")
+            self.log.debug("exit condition")
             return l
 
         index += 1
 
         next_folder = folders[index]
 
-        log.debug(f"next_folder {next_folder}")
+        self.log.debug(f"next_folder {next_folder}")
 
         for f in l:
             if f['title'] == next_folder and f['mimeType'] == 'application/vnd.google-apps.folder':
-                log.debug("recurse")
+                self.log.debug("recurse")
                 return self.ls(path, f, index)
         
         raise FolderNotFound(next_folder)
 
 
-    def mkdir(self, path: str, exist_ok = False, log=log) -> "GoogleDriveFile":
+    def mkdir(self, path: str, exist_ok = False) -> "GoogleDriveFile":
         """create a folder in path
 
         Args:
@@ -319,30 +320,30 @@ class primitives:
         """
         path = self.check_path(path)
 
-        log.debug(f"mkdir {path}")
+        self.log.debug(f"mkdir {path}")
 
         folders = path.split('/')[:-1 or None]
         folder_name = folders[-1]
         parent_name = folders[-2]
 
-        log.debug(f"folder_name {folder_name}, parent_name {parent_name}")
+        self.log.debug(f"folder_name {folder_name}, parent_name {parent_name}")
 
         partent_path = '/'
         for folder in folders[1:-2]:
             partent_path += f'{folder}/'
 
-        log.debug(f"partent_path {partent_path}")
+        self.log.debug(f"partent_path {partent_path}")
         
         l = self.ls(partent_path)
         for f in l:
             if f['title'] == folder_name and f['mimeType'] == 'application/vnd.google-apps.folder':
-                log.debug(f"folder {folder_name} already exists")
+                self.log.debug(f"folder {folder_name} already exists")
                 if exist_ok:
                     return f
                 else:
                     raise FolderAlreadyExist(path)
         
-        log.debug(f"creating folder {path}")
+        self.log.debug(f"creating folder {path}")
         
         parent_id = 'root'
         for l in self.ls(partent_path):
@@ -350,7 +351,7 @@ class primitives:
                 parent_id = l['id']
                 break
         
-        log.debug(f"parent_id {parent_id}")
+        self.log.debug(f"parent_id {parent_id}")
 
         f = self.drive.CreateFile({
             'title': folder_name,
@@ -386,7 +387,7 @@ class primitives:
             file.Trash()
 
 
-    def cp(self, src_path, dst_path, new_name, log=log):
+    def cp(self, src_path, dst_path, new_name):
         """copy a file or folder
 
         Args:
@@ -395,13 +396,13 @@ class primitives:
             log (logger, optional): the logger. Defaults to log.
         """
         raise NotImplementedError()
-        log.debug(f"cp {src['title']} to {dst['title']}")
+        self.log.debug(f"cp {src['title']} to {dst['title']}")
         
         self.drive.CopyFile(src['id'], dst['id'], new_name)
         
 
 
-    def download(self, file: "GoogleDriveFile", download_path, log=log) -> None:
+    def download(self, file: "GoogleDriveFile", download_path) -> None:
         """download a file into a local path. 
         if the file is a folder download recurdively it's content
 
@@ -430,7 +431,7 @@ class primitives:
 
 
     # fatta da copilot
-    def upload(self, path: str, folder_id='root', log=log) -> None:
+    def upload(self, path: str, folder_id='root') -> None:
         if not os.path.exists(path):
             raise Exception(f'Path {path} does not exist')
 
