@@ -53,9 +53,8 @@ if __name__ == '__main__':
 
     print("entripoint")
     
-    path = "/tmp/ff/gg/aa/tt"
-    univpm1.mkdir(path, make_parents=True, exist_ok=True)
-    univpm1.ls(path)
+    univpm1.cp("/tmp/ff", "/tmp/aa")
+
     
 
 

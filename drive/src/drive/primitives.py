@@ -247,12 +247,23 @@ class primitives:
         f.FetchMetadata()
         return f
 
-
     def create_tmp_folder(self, tmp_folder_name):
         self.tmp = self.mkdir(f"/{tmp_folder_name}", exist_ok=True)
 
+    # TODO:
+    def _ls(self, path):
+        ...
 
-    def ls(
+    # TODO:
+    def ls_single_file(self, path):
+        ...
+    
+    # TODO:
+    def ls(self, path):
+        ...
+
+    # deprecated need recostructor
+    def old_ls(
         self,
         path: str,
         get_folder=False,
@@ -412,31 +423,62 @@ class primitives:
 
         if file['mimeType'] == 'application/vnd.google-apps.folder':
             if recursive:
+                # only delete a folder if is explicitly asked
                 file.Trash()
             else: 
                 l = self._get_files_by_query(f"'{file['id']}' in parents and trashed=false")
                 if len(l) > 0:
                     raise FolderNotEmpty(file['title'])
                 else:
+                    # if the folder is empty, delete it
                     file.Trash()
         else:
+            # if is a file, delete it
             file.Trash()
 
 
-    def cp(self, src_path, dst_path, new_name):
+    def cp(self, src_path, dst_path, new_name = None):
         """copy a file or folder
 
-        Args:
-            src (GoogleDriveFile): the file / folder to copy
-            dst (GoogleDriveFile): the destination folder
-            log (logger, optional): the logger. Defaults to log.
+       
         """
-        raise NotImplementedError()
-        log.debug(f"cp {src['title']} to {dst['title']}")
-        
-        self.drive.CopyFile(src['id'], dst['id'], new_name)
-        
+        self.check_path(src_path)
+        self.check_path(dst_path)
 
+        log.debug(f"#" * 50)
+
+        log.debug(f"cp {src_path} {dst_path}")
+
+        folder = self.ls(dst_path, get_folder=True)[0]
+
+        try:
+            folder = self.ls(src_path, get_folder=True)[0]
+            log.debug("it's a folder!")
+
+            old_name = folder['title']
+
+            log.debug(f"copying folder {old_name}")
+
+            new_folder_path = f"{dst_path}/{new_name or old_name}"
+
+            log.debug(f"new_folder_path {new_folder_path}")
+
+            folder = self.mkdir(new_folder_path)
+
+            for f in self.ls(src_path):
+                self.cp(f"{src_path}/{f['title']}", new_folder_path)
+
+
+        except FolderNotFound:
+            file = self.ls(src_path, get_folder=False)[0]
+
+            log.debug("it's a file!")
+            log.debug(f"copying file {file[0]['title']}")
+  
+            file.Copy(folder, new_name)
+
+            
+            
 
     def download(self, file: "GoogleDriveFile", download_path) -> None:
         """download a file into a local path. 
