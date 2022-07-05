@@ -192,6 +192,7 @@ export_guide = {
 
 
 class primitives:
+    # TODO make a function that return the path from a file
 
     def __init__(self, name, authpath, tmp_folder_name='tmp') -> None:
         self.autenticate(name, authpath)
@@ -406,7 +407,6 @@ class primitives:
 
         f.Upload()
 
-
         return f
 
 
@@ -479,7 +479,7 @@ class primitives:
 
             
             
-
+    # make the input take a path
     def download(self, file: "GoogleDriveFile", download_path) -> None:
         """download a file into a local path. 
         if the file is a folder download recurdively it's content
@@ -495,6 +495,8 @@ class primitives:
 
         if file['mimeType'] == 'application/vnd.google-apps.folder':
             os.mkdir(f"{download_path}/{file['title']}")
+
+            # use ls instead
             for f in self._get_files_by_query(f"'{file['id']}' in parents and trashed=false"):
                 self.download(f, f"{download_path}/{file['title']}")
         else:
