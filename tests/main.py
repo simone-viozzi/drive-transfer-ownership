@@ -1,8 +1,9 @@
 
 
+from __future__ import annotations
 import shutil
 import os
-from drive import primitives
+from drive import primitives, Path
 import logging
 import logging.config
 import json
@@ -36,13 +37,19 @@ logging_conf = {
 }
 
 logging.getLogger('googleapiclient.discovery').setLevel(logging.ERROR)
-logging.getLogger('drive.primitives.ls').setLevel(logging.ERROR)
+#logging.getLogger('drive.primitives.ls').setLevel(logging.ERROR)
 logging.getLogger('drive.primitives._get_files_by_query').setLevel(logging.ERROR)
 
 
 logging.config.dictConfig(logging_conf)
 log = logging.getLogger()
 
+
+def get_titles(l: list) -> list[str]:
+    r = []
+    for f in l:
+        r.append(f['title'])
+    return r
 
 
 if __name__ == '__main__':
@@ -53,10 +60,9 @@ if __name__ == '__main__':
 
     print("entripoint")
     
-    univpm1.cp("/tmp/ff", "/tmp/aa")
+    print(get_titles([univpm1.ls_single_file("/tmp/a.pdf")]))
 
-    
-
+    print(get_titles([univpm1.ls_single_file("/tmp/asdf")]))
 
     #f = univpm1.drive.CreateFile(yo{'id': 'root'})
 #

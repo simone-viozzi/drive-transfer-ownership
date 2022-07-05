@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 import cachetools.func
 import cachetools
 from cachetools import cached
@@ -190,10 +193,95 @@ export_guide = {
     "application/pdf": None
 }
 
+class Path(str):
+
+    def __new__(cls, path):
+        return str.__new__(cls, path)
+
+    def __init__(self, path):
+        self.path = Path.split_path(path)
+        self.path_str = path
+
+    def __getitem__(self, s: int | slice) -> str | list:
+        if isinstance(s, slice):
+            s.indices
+            start, stop, step = s.indices(len(self))
+            if step is not None and step != 1:
+                raise ValueError("step not supported")
+            return self.path[start:stop]
+        elif isinstance(s, int):
+            return self.path[s]
+        elif isinstance(s, tuple):
+            raise NotImplementedError('Tuple as index')
+        else:
+            raise TypeError('Invalid argument type: {}'.format(type(s)))
+
+    def __len__(self):
+        return len(self.path)
+
+    def __repr__(self):
+        return self.path_str
+
+    def __str__(self):
+        return self.path_str
+
+    def __iter__(self):
+        return iter(self.path)
+
+    def __eq__(self, other):
+        return super().__eq__(other)
+    
+    def __hash__(self):
+        return super().__hash__()
+    
+    def get_partial(self, i: int) -> str:
+        if i > 0: i+=1
+
+        if i > len(self) or i < -len(self)+1:
+            raise IndexError('Index out of range')
+
+        return Path.join_path(self.path[:i])
+
+    @staticmethod
+    def check_path(path: str) -> str:
+        path = path.rstrip('/')
+        if not path.startswith('/'):
+            path = f'/{path}'
+        return path
+
+    @staticmethod
+    def split_path(path: str) -> list[str]:
+        """split path in a list like:
+        /aa/bb/ -> ['/', 'aa', 'bb']
+        / -> ['/']
+
+        Args:
+            path (str): the path to split
+
+        Returns:
+            list[str]: the path split in a list
+        """
+        path = Path.check_path(path)
+
+        if path == '/':
+            return ['/']
+        else:
+            l = path.split('/')
+            l[0] = '/'
+            return l
+
+
+    @staticmethod
+    def join_path(splitted_path: list[str]) -> Path:
+        """join a splitted path in a path
+        ['/', 'aa', 'bb'] -> /aa/bb
+        ['/'] -> /
+        """
+
+        return Path('/' + '/'.join(splitted_path[1:]))
+
 
 class primitives:
-    # TODO #3 make a function that return the path from a file
-
     def __init__(self, name, authpath, tmp_folder_name='tmp') -> None:
         self.autenticate(name, authpath)
 
@@ -202,7 +290,7 @@ class primitives:
 
         # the temp folder will be used to load thing before moving 
         # them to their final destination
-        self.create_tmp_folder(tmp_folder_name)
+        #self.create_tmp_folder(tmp_folder_name)
 
         
     def autenticate(self, name, authpath) -> None:
@@ -236,13 +324,13 @@ class primitives:
 
         self.drive: GoogleDrive = GoogleDrive(gauth)
 
-    @cached(cache=cache)
+    
     def _get_files_by_query(self, query: str) -> "list[GoogleDriveFile]":
         log = logging.getLogger(f"{__name__}._get_files_by_query")
         log.debug(f"doing query: {query}")
         return self.drive.ListFile({'q': query}).GetList()
 
-    @cached(cache=cache)    
+     
     def _get_file_by_id(self, id: str) -> "GoogleDriveFile":
         f = self.drive.CreateFile({'id': id})
         f.FetchMetadata()
@@ -251,85 +339,71 @@ class primitives:
     def create_tmp_folder(self, tmp_folder_name):
         self.tmp = self.mkdir(f"/{tmp_folder_name}", exist_ok=True)
 
-    # TODO:
-    def _ls(self, path):
-        ...
 
-    # TODO:
-    def ls_single_file(self, path):
-        ...
-    
-    # TODO:
-    def ls(self, path):
-        ...
-
-    # deprecated need recostructor
-    def old_ls(
-        self,
-        path: str,
-        get_folder=False,
-        folder={'id': 'root', 'title': 'root'},
-        index=0
-    ) -> "list[GoogleDriveFile]":
-        """list all files in a folder given it's path, 
-            return the file if the path point to a single file.
-
-        TODO:
-            - what happen in a file and a folder have the same title?
-            - maybe add support for wildcards?
-
-        Args:
-            path (str): the path to the folder, es: /folder/subfolder
-            folder_id (str, optional): used in recursion. Defaults to 'root'.
-            index (int, optional): used in recursion. Defaults to 0.
-
-        Raises:
-            FolderNotFound: in case the folder does not exist
-
-        Returns:
-            list[GoogleDriveFile]: list of files / folders in the folder
-        """
+    @cached(cache, key=lambda self, path: path)
+    def ls(self, path) -> list[GoogleDriveFile]:
         log = logging.getLogger(f"{__name__}.ls")
+
+        path = Path(path)
+
+        log.debug("#"* 50)
+        log.debug(f"ls in {path}")
         
-        path = self.check_path(path)
+        folder_id = 'root'
+        file_list: list[GoogleDriveFile] = []
+        for i in range(len(path)):
+            partial_path = path.get_partial(i)
 
-        log.debug("#" * 50)
-        log.debug(f"ls path {path}, index {index}")
+            log.debug(f"listing {partial_path}, i: {i}")
 
-        folders = path.split('/')
-        folders[0] = '/'
-        folders = [f for f in folders if f]
-        log.debug(folders)
+            try:
+                file_list = cache[partial_path]
+                log.debug(f"{partial_path} is in cache")
+            except KeyError:
+                log.debug(f"{partial_path} is not in cache")
+                file_list = self._get_files_by_query(
+                    f"'{folder_id}' in parents and trashed=false"
+                )
 
-        is_last_path_segment = index == len(folders) - 1
+                try:
+                    cache[partial_path] = file_list
+                except ValueError:
+                    pass  # value too large
+            
+            if i < len(path) - 1:
+                log.debug(f"looking for {path[i+1]}")
+                folder_id = None
+                for file in file_list:
+                    if file['title'] == path[i+1] and file['mimeType'] == 'application/vnd.google-apps.folder':
+                        folder_id = file['id']
+                        break
+                if folder_id is None:
+                    raise FileNotFoundError(f"{path.get_partial(i+1)} not found")
+            else:
+                break
 
-        if is_last_path_segment and get_folder:
-            return [folder]
+        return file_list
 
-        log.debug(f"folder: {folder['title']}")
-        l: "list[GoogleDriveFile]" = self._get_files_by_query(f"'{folder['id']}' in parents and trashed=false")
-        
-        if is_last_path_segment:
-            log.debug("exit condition folder")
-            return l
 
-        index += 1
-        next_folder = folders[index]
+    def ls_single_file(self, path) -> "GoogleDriveFile":
+        log = logging.getLogger(f"{__name__}.ls_single_file")
 
-        log.debug(f"next_folder {next_folder}")
+        path = Path(path)
+        log.debug(f"path: {path}")
 
-        is_last_path_segment = index == len(folders) - 1
-        for f in l:
-            if f['title'] == next_folder:
-                if f['mimeType'] == 'application/vnd.google-apps.folder':
-                    log.debug("recurse")
-                    return self.ls(path, get_folder, f, index)
-                elif is_last_path_segment:
-                    log.debug("exit condition file")
-                    return [f]
+        if len(path) == 1:
+            return self._get_file_by_id('root')
 
-        path_until_now = '/' + '/'.join(folders[1:index+1])
-        raise FolderNotFound(path_until_now)
+        parent = path.get_partial(-1)
+
+        file_list = self.ls(parent)
+
+        for f in file_list:
+            if f['title'] == path[-1]:
+                return f
+
+        raise FileNotFoundError(f"file {path} not found")
+
 
     def mkdir(
         self,
@@ -349,7 +423,7 @@ class primitives:
             GoogleDriveFile: the new folder
         """
         log.debug(f"#" * 50)
-        path = self.check_path(path)
+        path = Path(path)
 
         log.debug(f"mkdir {path}")
 
@@ -368,7 +442,7 @@ class primitives:
 
         last_parent = None
         try:
-            for f in self.ls(partent_path):
+            for f in self.old_ls(partent_path):
                 if f['title'] == folder_name and f['mimeType'] == 'application/vnd.google-apps.folder':
                     log.debug(f"folder {folder_name} already exists")
                     if exist_ok:
@@ -393,7 +467,7 @@ class primitives:
             # TODO avoid this as much as possible!
             log.debug(f"trowing away the cache")
             cache.clear()
-            parent_id = self.ls(partent_path, get_folder=True)[0]['id']
+            parent_id = self.old_ls(partent_path, get_folder=True)[0]['id']
         
         log.debug(f"creating folder {path}")
      
@@ -532,10 +606,4 @@ class primitives:
                 json.dump(file.metadata, f, indent=4)
                 
 
-    def check_path(self, path):
-        if not path.startswith('/'):
-            path = f'/{path}'
-        if path.endswith('/'):
-            path = path[:-1]
-        
-        return path
+    

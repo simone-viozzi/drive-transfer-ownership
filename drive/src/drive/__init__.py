@@ -1,2 +1,2 @@
 
-from .primitives import primitives
+from .primitives import primitives, Path
