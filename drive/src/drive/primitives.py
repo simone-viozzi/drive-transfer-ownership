@@ -192,7 +192,7 @@ export_guide = {
 
 
 class primitives:
-    # TODO make a function that return the path from a file
+    # TODO #3 make a function that return the path from a file
 
     def __init__(self, name, authpath, tmp_folder_name='tmp') -> None:
         self.autenticate(name, authpath)
