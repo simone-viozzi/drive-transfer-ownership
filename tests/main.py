@@ -60,14 +60,12 @@ if __name__ == '__main__':
 
     print("entripoint")
     
-    print(get_titles([univpm1.ls_single_file("/tmp/a.pdf")]))
+    file = univpm1.ls_single_file("/tmp/a.pdf")
+    folder = univpm1.ls_single_file("/tmp/asdf")
 
-    print(get_titles([univpm1.ls_single_file("/tmp/asdf")]))
-
-    #f = univpm1.drive.CreateFile(yo{'id': 'root'})
-#
-    #f.FetchMetadata()
-    #print(json.dumps(f.metadata, indent=4))
+    file.Copy(folder)
+    
+ 
 
 
     
