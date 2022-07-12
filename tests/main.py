@@ -60,10 +60,12 @@ if __name__ == '__main__':
 
     print("entripoint")
     
-    file = univpm1.ls_single_file("/tmp/a.pdf")
-    folder = univpm1.ls_single_file("/tmp/asdf")
+    file = univpm1.ls_single_file("/tmp/asdf")
 
-    file.Copy(folder)
+    b = file.GetContentIOBuffer()
+    
+    for l in b:
+        print(l)
     
  
 

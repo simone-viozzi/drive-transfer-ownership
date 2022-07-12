@@ -81,5 +81,4 @@ if __name__ == '__main__':
     auth = autenticate('univpm1', f'{basepath}/auth/')
 
     fs = GDriveFileSystem("root/tmp", auth)
-
-    print(fs.ls("root/tmp"))
+    fs.cp_file('root/tmp/file1', 'root/tmp/file2')
