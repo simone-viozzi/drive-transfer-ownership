@@ -7,6 +7,8 @@ from drive import primitives, Path
 import logging
 import logging.config
 import json
+from deepdiff import DeepDiff
+from pprint import pprint
 
 
 basepath = os.path.dirname(os.path.abspath(__file__))
@@ -60,13 +62,11 @@ if __name__ == '__main__':
 
     print("entripoint")
     
-    file = univpm1.ls_single_file("/tmp/asdf")
+    file = univpm1.ls_single_file("/tmp/file1")
+    folder = univpm1.ls_single_file("/")
+    
+    f = file.Copy(folder)
 
-    b = file.GetContentIOBuffer()
-    
-    for l in b:
-        print(l)
-    
  
 
 
