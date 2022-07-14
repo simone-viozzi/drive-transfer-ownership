@@ -6,6 +6,7 @@ from pydrive2.auth import GoogleAuth
 import os
 import logging
 import logging.config
+import json
 
 
 basepath = os.path.dirname(os.path.abspath(__file__))
@@ -81,4 +82,6 @@ if __name__ == '__main__':
     auth = autenticate('univpm1', f'{basepath}/auth/')
 
     fs = GDriveFileSystem("root/tmp", auth)
-    fs.cp_file('root/tmp/file1', 'root/tmp/file2')
+    l = fs.ls("root/tmp", detail=True)
+
+    print(json.dumps(l, indent=4))
