@@ -63,11 +63,36 @@ if __name__ == '__main__':
     print("entripoint")
     
     file = univpm1.ls_single_file("/tmp/file1")
-    folder = univpm1.ls_single_file("/")
     
-    f = file.Copy(folder)
+    #file.Rename("file1_renamed")
+
+    #file.FetchMetadata(fields="title")
+    #file["title"] = "new_file1"
+    #file.Upload()
 
  
 
 
-    
+'''
+self["title"] = new_title
+
+self._FilesPatch(param=param)
+'''
+
+
+'''
+if param is None:
+    param = {}
+
+if "body" not in param:
+    param["body"] = {}
+
+param['body']['title'] = new_title
+
+file = {'title': new_title}
+        
+self.auth.service.files().patch(
+    fileId=self["id"],
+    body=file,
+    fields='title').execute()
+'''

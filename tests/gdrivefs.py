@@ -82,6 +82,11 @@ if __name__ == '__main__':
     auth = autenticate('univpm1', f'{basepath}/auth/')
 
     fs = GDriveFileSystem("root/tmp", auth)
+
     l = fs.ls("root/tmp", detail=True)
 
     print(json.dumps(l, indent=4))
+
+    cat = fs.cat("root/tmp/file1")
+
+    print(cat)
