@@ -62,13 +62,13 @@ if __name__ == '__main__':
 
     print("entripoint")
     
-    file = univpm1.ls_single_file("/tmp/file1")
+    #file = univpm1.ls_single_file("/tmp/file1")
     
-    #file.Rename("file1_renamed")
+    file = univpm1.drive.CreateFile({'id': "13nYjSBX7FmSUFnBcTuT6hKsFswXhqcpzpioei5r2eRQ"})
 
-    #file.FetchMetadata(fields="title")
-    #file["title"] = "new_file1"
-    #file.Upload()
+    file.FetchMetadata()
+    
+    print(json.dumps(file, indent=4))
 
  
 

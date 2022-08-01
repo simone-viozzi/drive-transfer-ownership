@@ -83,10 +83,9 @@ if __name__ == '__main__':
 
     fs = GDriveFileSystem("root/tmp", auth)
 
-    l = fs.ls("root/tmp", detail=True)
 
-    print(json.dumps(l, indent=4))
+    #fs.mv('root/tmp/a.pdf', 'root/tmp/aa/b.pdf')
 
-    cat = fs.cat("root/tmp/file1")
+    fs.mv('root/tmp/aa/b.pdf', 'root/tmp/a.pdf')
 
-    print(cat)
+    
