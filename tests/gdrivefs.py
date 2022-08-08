@@ -84,34 +84,8 @@ if __name__ == '__main__':
     fs = GDriveFileSystem("root/tmp", auth)
 
 
-    #fs.mv('root/tmp/a.pdf', 'root/tmp/aa/b.pdf')
+    fs.mv('root/tmp/a.pdf', 'root/tmp/zdfsagf/b.pdf')
 
     #fs.mv('root/tmp/aa/b.pdf', 'root/tmp/a.pdf')
 
-    # self.path
-    print(fs.ls("root/tmp"))
-    # > ['root/tmp/folder1/', [other files]]
-    print(fs.ls("root/tmp/folder1"))
-    # > ['root/tmp/folder1/folder2/', 'root/tmp/folder1/file1']
-    print(fs.ls("root/tmp/folder1/folder2"))
-    # > ['root/tmp/folder1/folder2/file2']
-
-    # self.path = root/tmp
-    # .
-    # |- folder1
-    # |  |- file1
-    # |  |- folder2
-    # |  |  |- file2
-
-    print(fs.ls("."))
-    # > ['./tmp/', './[files in my drive root]/']
-    print(fs.ls("./folder1"))
-    # > None
-    print(fs.ls("./folder1/folder2"))
-    # > None
-    print(fs.ls("folder1"))
-    # > ['folder1/tmp/', 'folder1/[files in my drive root]/']
-    print(fs.ls("folder1/folder2"))
-    # > None
-    
     
