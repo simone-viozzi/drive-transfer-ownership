@@ -81,11 +81,17 @@ if __name__ == '__main__':
     
     auth = autenticate('univpm1', f'{basepath}/auth/')
 
-    fs = GDriveFileSystem("root/tmp", auth)
+    fs = GDriveFileSystem("root", auth)
 
+    #fs.copy('root/tmp/a.pdf', 'root/tmp/folder/', recursive=False)
+    #fs.copy('root/tmp/folder1/', 'root/tmp/folder/', recursive=True)
 
-    fs.mv('root/tmp/a.pdf', 'root/tmp/zdfsagf/b.pdf')
+    #a = fs.info('root/tmp/a.pdf')
+    #print(a)
 
     #fs.mv('root/tmp/aa/b.pdf', 'root/tmp/a.pdf')
+    #fs.mv('root/tmp/a.pdf', 'root/tmp/aa/b.pdf')
+
+    fs.mv('root/tmp/a.pdf', 'root/b.pdf')
 
     
