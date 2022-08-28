@@ -83,8 +83,14 @@ if __name__ == '__main__':
 
     fs = GDriveFileSystem("root", auth)
 
+    try:
+        fs.rm('root/tmp/folder/', recursive=True)
+    except FileNotFoundError:
+        pass   
+    fs.makedir('root/tmp/folder/')
+
     #fs.copy('root/tmp/a.pdf', 'root/tmp/folder/', recursive=False)
-    #fs.copy('root/tmp/folder1/', 'root/tmp/folder/', recursive=True)
+    fs.copy('root/tmp/folder1/', 'root/tmp/folder/', recursive=True)
 
     #a = fs.info('root/tmp/a.pdf')
     #print(a)
@@ -92,6 +98,6 @@ if __name__ == '__main__':
     #fs.mv('root/tmp/aa/b.pdf', 'root/tmp/a.pdf')
     #fs.mv('root/tmp/a.pdf', 'root/tmp/aa/b.pdf')
 
-    fs.mv('root/tmp/a.pdf', 'root/b.pdf')
+    #fs.mv('root/tmp/a.pdf', 'root/b.pdf')
 
     

@@ -1,3 +1,6 @@
 [submodule "PyDrive2"]
 	path = PyDrive2
 	url = https://github.com/simone-viozzi/PyDrive2.git
+[submodule "filesystem_spec"]
+	path = filesystem_spec
+	url = https://github.com/fsspec/filesystem_spec.git
