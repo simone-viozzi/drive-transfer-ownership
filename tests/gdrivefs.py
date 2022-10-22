@@ -1,13 +1,13 @@
 
 from __future__ import annotations
 
-from pydrive2.fs import GDriveFileSystem
-from pydrive2.auth import GoogleAuth
-import os
+import json
 import logging
 import logging.config
-import json
+import os
 
+from pydrive2.auth import GoogleAuth
+from pydrive2.fs import GDriveFileSystem
 
 basepath = os.path.dirname(os.path.abspath(__file__))
 
@@ -81,23 +81,36 @@ if __name__ == '__main__':
     
     auth = autenticate('univpm1', f'{basepath}/auth/')
 
-    fs = GDriveFileSystem("root", auth)
+    fs = GDriveFileSystem("root/tmp/", auth)
 
-    try:
-        fs.rm('root/tmp/folder/', recursive=True)
-    except FileNotFoundError:
-        pass   
-    fs.makedir('root/tmp/folder/')
+    #try:
+    #    fs.rm('root/tmp/folder/', recursive=True)
+    #except FileNotFoundError:
+    #    pass
+    #fs.makedir('root/tmp/folder/')
+    
+    #print(fs.expand_path('root/tmp/fo1/fo2/', recursive=True))
 
-    #fs.copy('root/tmp/a.pdf', 'root/tmp/folder/', recursive=False)
-    fs.copy('root/tmp/folder1/', 'root/tmp/folder/', recursive=True)
+    fs.copy('root/tmp/a.pdf', 'root/tmp/folder/', recursive=False)
+    #fs.copy('root/tmp/f1/', 'root/tmp/folder/new_folder1', recursive=True)
 
     #a = fs.info('root/tmp/a.pdf')
     #print(a)
 
-    #fs.mv('root/tmp/aa/b.pdf', 'root/tmp/a.pdf')
-    #fs.mv('root/tmp/a.pdf', 'root/tmp/aa/b.pdf')
+    #fs.mv('root/tmp/aa/a.pdf', 'root/tmp')
+    #fs.mv('root/tmp/a.pdf', 'root/tmp/aa')
 
-    #fs.mv('root/tmp/a.pdf', 'root/b.pdf')
+    #fs.mv('root/tmp/b.pdf', 'root/')
+    #fs.mv('root/a.pdf', 'root/tmp/b.pdf')
 
+
+    #f = fs.find('root/tmp/fo1/')
+    #print(f)
+
+    #f = fs.find('root/tmp/fo1/fo2')
+    #print(f)
+
+
+    #e = fs.expand_path('root/tmp/fo1/fo2', recursive=True)
+    #print(e)
     
